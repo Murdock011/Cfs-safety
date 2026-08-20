@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#14171a">
+<title>Mishap Report</title>
+<style>
+  :root {
+    --panel: #14171a;
+    --panel-raised: #1c2024;
+    --ink: #eef0ef;
+    --ink-dim: #8b9199;
+    --caution: #d99a3d;
+    --rule: #2a2f34;
+    --radius: 2px;
+  }
+  * { box-sizing: border-box; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  html, body {
+    margin: 0; padding: 0; background: var(--panel); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 32px 20px 48px; }
+  header { margin-bottom: 8px; }
+  .eyebrow { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-dim); margin: 0 0 14px; }
+  .stamp { font-size: 15px; letter-spacing: 0.02em; color: var(--caution); margin: 0 0 20px; }
+  h1 { font-size: 21px; font-weight: 600; margin: 0 0 8px; letter-spacing: -0.01em; }
+  .desc { font-size: 13px; color: var(--ink-dim); line-height: 1.55; margin: 0 0 28px; }
+  .logline { border-top: 1px solid var(--rule); padding: 18px 0; }
+  .logline:last-of-type { border-bottom: 1px solid var(--rule); }
+  .logline label, .confidential label {
+    display: block; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--ink-dim); margin-bottom: 10px;
+  }
+  input[type="text"], input[type="datetime-local"], textarea, select {
+    width: 100%; padding: 11px 12px; font-size: 16px; font-family: inherit;
+    border: 1px solid var(--rule); border-radius: var(--radius);
+    background: var(--panel-raised); color: var(--ink);
+  }
+  input::placeholder, textarea::placeholder { color: #565c62; }
+  input:focus, textarea:focus, select:focus {
+    outline: none; border-color: var(--ink-dim); box-shadow: 0 0 0 1px var(--ink-dim);
+  }
+  textarea { resize: none; overflow-y: hidden; min-height: 64px; line-height: 1.5; }
+  select {
+    padding-right: 34px; appearance: none; -webkit-appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path d="M0 0l5 6 5-6z" fill="%238b9199"/></svg>');
+    background-repeat: no-repeat; background-position: right 12px center; font-size: 15px;
+  }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .pair .field { margin-top: 14px; }
+  .pair .field:first-of-type { margin-top: 0; }
+  .segmented { display: flex; border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden; }
+  .segmented button {
+    flex: 1; padding: 11px 6px; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase;
+    font-family: inherit; background: var(--panel-raised); border: none; border-right: 1px solid var(--rule);
+    color: var(--ink-dim); cursor: pointer;
+  }
+  .segmented button:last-child { border-right: none; }
+  .segmented button.active { background: var(--ink); color: var(--panel); }
+  .subgroup { margin-top: 16px; }
+  .actions { margin-top: 28px; }
+  button.primary, button.secondary {
+    width: 100%; padding: 15px; font-size: 14px; font-weight: 600; letter-spacing: 0.02em;
+    font-family: inherit; border-radius: var(--radius); cursor: pointer; border: none;
+  }
+  button.primary { background: var(--ink); color: var(--panel); margin-bottom: 10px; }
+  button.secondary { background: transparent; color: var(--ink); border: 1px solid var(--rule); }
+  button.primary:active, button.secondary:active { opacity: 0.8; }
+  .confidential { margin-top: 4px; padding: 16px 0 4px; }
+  .confidential .tag { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-dim); margin-bottom: 16px; }
+  .confidential .field { margin-bottom: 16px; }
+  .error { font-size: 12px; color: var(--caution); margin-top: 8px; display: none; }
+  .error.show { display: block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Confidential · Safety Office</p>
+    <p class="stamp mono" id="dtg">—</p>
+    <h1>Mishap Report</h1>
+    <p class="desc">Base AFB LBWG · Unit CFS · Aircraft PC7 MK2. Under two minutes — the rest is completed by BASCO.</p>
+  </header>
+
+  <div class="logline">
+    <label>3A. Type</label>
+    <div class="segmented" id="typeSegment">
+      <button type="button" class="active" data-value="Incident">Incident</button>
+      <button type="button" data-value="Accident">Accident</button>
+    </div>
+  </div>
+
+  <div class="logline">
+    <label>3B. Category</label>
+    <div class="segmented" id="categorySegment">
+      <button type="button" class="active" data-value="Flying">Flying</button>
+      <button type="button" data-value="Non-Flying">Non-Flying</button>
+    </div>
+  </div>
+
+  <div class="logline">
+    <label for="division">3C. Mishap Division</label>
+    <select id="division">
+      <option value="Normal" selected>Normal</option>
+      <option value="ATC">ATC</option>
+      <option value="Bird">Bird</option>
+      <option value="Weapon">Weapon</option>
+      <option value="Battle">Battle</option>
+    </select>
+  </div>
+
+  <div class="logline">
+    <label for="tail">4. Tail Number</label>
+    <input type="text" id="tail" placeholder="e.g. 2027">
+  </div>
+
+  <div class="logline">
+    <label for="occurred">5. Date &amp; Time of Occurrence</label>
+    <input type="datetime-local" id="occurred">
+    <div class="subgroup segmented" id="dayNightSegment">
+      <button type="button" class="active" data-value="Day">Day</button>
+      <button type="button" data-value="Night">Night</button>
+    </div>
+  </div>
+
+  <div class="logline">
+    <label>6. Departure / Destination</label>
+    <input type="text" id="departure" placeholder="Departure" style="margin-bottom:12px;">
+    <input type="text" id="destination" placeholder="Destination">
+  </div>
+
+  <div class="logline" id="flyingSection">
+    <label>7. Sortie Details</label>
+    <input type="text" id="mission" placeholder="Mission code" style="margin-bottom:12px;">
+    <input type="text" id="phase" placeholder="Phase of flight" style="margin-bottom:12px;">
+    <input type="text" id="speed" placeholder="Speed (kts)" style="margin-bottom:12px;">
+    <input type="text" id="height" placeholder="Height" style="margin-bottom:12px;">
+    <div class="pair">
+      <div class="field">
+        <select id="rules">
+          <option value="VFR" selected>VFR</option>
+          <option value="IFR">IFR</option>
+        </select>
+      </div>
+      <div class="field">
+        <select id="met">
+          <option value="VMC" selected>VMC</option>
+          <option value="IMC">IMC</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="logline">
+    <label for="eventDescription">9. Event Description</label>
+    <textarea id="eventDescription" placeholder="What happened"></textarea>
+    <div class="error" id="eventError">This field is required.</div>
+  </div>
+
+  <div class="logline">
+    <label for="actionsTaken">10. Actions Taken</label>
+    <textarea id="actionsTaken" placeholder="Optional"></textarea>
+  </div>
+
+  <div class="logline">
+    <label>11. Who Was Involved</label>
+    <input type="text" id="commander" placeholder="11A. Commander" style="margin-bottom:12px;">
+    <input type="text" id="coPilot" placeholder="11B. Co-pilot/Student">
+  </div>
+
+  <div class="logline" id="birdSection">
+    <label for="birdstrike">12. Birdstrike Info</label>
+    <textarea id="birdstrike" placeholder="Optional"></textarea>
+  </div>
+
+  <div class="confidential">
+    <p class="tag">Confidential — 13. Enquiries / follow-up only</p>
+    <div class="field"><label for="rank">Rank</label><input type="text" id="rank" placeholder="Optional"></div>
+    <div class="field"><label for="name">Name</label><input type="text" id="name" placeholder="Optional, but helps us follow up"></div>
+    <div class="field"><label for="tel">Tel no</label><input type="text" id="tel" placeholder="Optional"></div>
+  </div>
+
+  <div class="actions">
+    <button class="primary" id="sendBtn">Send as Email</button>
+    <button class="secondary" id="copyBtn">Copy Report Text</button>
+  </div>
+</div>
+
+<script>
+  const SAFETY_OFFICE_EMAIL = "Cfs@telkomsa.net";
+
+  function makeSegment(id, initial, onChange) {
+    const el = document.getElementById(id);
+    let value = initial;
+    el.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      el.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      value = btn.dataset.value;
+      if (onChange) onChange(value);
+    });
+    return { get: () => value };
+  }
+
+  const typeSeg = makeSegment('typeSegment', 'Incident');
+  const categorySeg = makeSegment('categorySegment', 'Flying', updateConditionals);
+  const dayNightSeg = makeSegment('dayNightSegment', 'Day');
+  const divisionEl = document.getElementById('division');
+  divisionEl.addEventListener('change', updateConditionals);
+
+  function updateConditionals() {
+    document.getElementById('flyingSection').style.display = (categorySeg.get() === 'Flying') ? '' : 'none';
+    document.getElementById('birdSection').style.display = (divisionEl.value === 'Bird') ? '' : 'none';
+  }
+  updateConditionals();
+
+  const dtgEl = document.getElementById('dtg');
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function pad(n) { return String(n).padStart(2, '0'); }
+  function formatDTG(d) {
+    const bravo = new Date(d.getTime() + 2 * 60 * 60000);
+    const day = pad(bravo.getUTCDate());
+    const hour = pad(bravo.getUTCHours());
+    const min = pad(bravo.getUTCMinutes());
+    const mon = MONTHS[bravo.getUTCMonth()];
+    const yr = pad(bravo.getUTCFullYear() % 100);
+    return `${day}${hour}${min}B ${mon} ${yr}`;
+  }
+  function tickDTG() { dtgEl.textContent = formatDTG(new Date()); }
+  tickDTG();
+  setInterval(tickDTG, 1000);
+
+  const occurredEl = document.getElementById('occurred');
+  (function setDefaultOccurred() {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    occurredEl.value = now.toISOString().slice(0, 16);
+  })();
+
+  function autoGrow(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
+  document.querySelectorAll('textarea').forEach(el => {
+    autoGrow(el);
+    el.addEventListener('input', () => autoGrow(el));
+  });
+
+  function buildReportText() {
+    const tail = document.getElementById('tail').value.trim();
+    const occurred = occurredEl.value ? occurredEl.value.replace('T', ' ') : '';
+    const departure = document.getElementById('departure').value.trim() || 'FALW';
+    const destination = document.getElementById('destination').value.trim() || 'FALW';
+    const mission = document.getElementById('mission').value.trim();
+    const phase = document.getElementById('phase').value.trim();
+    const speed = document.getElementById('speed').value.trim();
+    const height = document.getElementById('height').value.trim();
+    const rules = document.getElementById('rules').value;
+    const met = document.getElementById('met').value;
+    const eventDescription = document.getElementById('eventDescription').value.trim();
+    const actionsTaken = document.getElementById('actionsTaken').value.trim();
+    const commander = document.getElementById('commander').value.trim();
+    const coPilot = document.getElementById('coPilot').value.trim();
+    const birdstrike = document.getElementById('birdstrike').value.trim();
+    const rank = document.getElementById('rank').value.trim();
+    const name = document.getElementById('name').value.trim();
+    const tel = document.getElementById('tel').value.trim();
+
+    let lines = [];
+    lines.push(`Filed (DTG): ${dtgEl.textContent}`);
+    lines.push(`2. Base/Unit: AFB LBWG / CFS`);
+    lines.push(`3A. Type: ${typeSeg.get()}`);
+    lines.push(`3B. Category: ${categorySeg.get()}`);
+    lines.push(`3C. Mishap Division: ${divisionEl.value}`);
+    lines.push(`4. Aircraft: PC7 MK2 / ${tail || '\u2014'}`);
+    if (occurred) lines.push(`5. Occurred: ${occurred} (${dayNightSeg.get()})`);
+    lines.push(`6. Departure/Destination: ${departure} / ${destination}`);
+    if (categorySeg.get() === 'Flying') {
+      lines.push('7. Sortie Details:');
+      if (mission) lines.push(`  Mission: ${mission}`);
+      if (phase) lines.push(`  Phase of Flight: ${phase}`);
+      if (speed) lines.push(`  Speed: ${speed}`);
+      if (height) lines.push(`  Height: ${height}`);
+      if (rules) lines.push(`  Flight Rules: ${rules}`);
+      if (met) lines.push(`  Met Conditions: ${met}`);
+    }
+    lines.push('');
+    lines.push('9. Event Description:');
+    lines.push(eventDescription || '\u2014');
+    if (actionsTaken) {
+      lines.push('');
+      lines.push('10. Actions Taken:');
+      lines.push(actionsTaken);
+    }
+    if (commander || coPilot) {
+      lines.push('');
+      lines.push('11. Who Was Involved:');
+      if (commander) lines.push(`  A. Commander: ${commander}`);
+      if (coPilot) lines.push(`  B. Co-pilot/Student: ${coPilot}`);
+    }
+    if (divisionEl.value === 'Bird' && birdstrike) {
+      lines.push('');
+      lines.push(`12. Birdstrike Info: ${birdstrike}`);
+    }
+    lines.push('');
+    lines.push('\u2014 Confidential (13. Enquiries) \u2014');
+    lines.push(`Rank: ${rank || 'not provided'}`);
+    lines.push(`Name: ${name || 'not provided'}`);
+    lines.push(`Tel No: ${tel || 'not provided'}`);
+    return lines.join('\n');
+  }
+
+  function validate() {
+    const val = document.getElementById('eventDescription').value.trim();
+    const errorEl = document.getElementById('eventError');
+    if (!val) {
+      errorEl.classList.add('show');
+      document.getElementById('eventDescription').focus();
+      return false;
+    }
+    errorEl.classList.remove('show');
+    return true;
+  }
+
+  document.getElementById('sendBtn').addEventListener('click', () => {
+    if (!validate()) return;
+    const text = buildReportText();
+    const subject = encodeURIComponent(`Mishap Report ${dtgEl.textContent} \u2014 ${typeSeg.get()} \u2014 ${categorySeg.get()}`);
+    const body = encodeURIComponent(text);
+    window.location.href = `mailto:${SAFETY_OFFICE_EMAIL}?subject=${subject}&body=${body}`;
+  });
+
+  document.getElementById('copyBtn').addEventListener('click', async () => {
+    if (!validate()) return;
+    const text = buildReportText();
+    const btn = document.getElementById('copyBtn');
+    try {
+      await navigator.clipboard.writeText(text);
+      btn.textContent = 'Copied \u2713';
+    } catch (err) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); btn.textContent = 'Copied \u2713'; }
+      catch (e) { btn.textContent = 'Copy failed'; }
+      document.body.removeChild(ta);
+    }
+    setTimeout(() => { btn.textContent = 'Copy Report Text'; }, 2500);
+  });
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>
