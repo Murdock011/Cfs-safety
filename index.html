@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#14171a">
+<title>CFS Safety Reporting</title>
+<style>
+  :root {
+    --panel: #14171a;
+    --panel-raised: #1c2024;
+    --ink: #eef0ef;
+    --ink-dim: #8b9199;
+    --caution: #d99a3d;
+    --rule: #2a2f34;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--panel);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 32px 20px 48px; }
+  .eyebrow {
+    font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink-dim); margin: 0 0 14px;
+  }
+  h1 { font-size: 21px; font-weight: 600; margin: 0 0 8px; letter-spacing: -0.01em; }
+  .desc { font-size: 13px; color: var(--ink-dim); line-height: 1.55; margin: 0 0 12px; }
+  .tile {
+    display: block;
+    border-top: 1px solid var(--rule);
+    padding: 20px 4px;
+    text-decoration: none;
+    color: var(--ink);
+  }
+  .tile:last-of-type { border-bottom: 1px solid var(--rule); }
+  .tile-label { display: block; font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .tile-sub {
+    display: block; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-dim);
+  }
+  .tile:active { background: var(--panel-raised); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow"> CENTRAL · FLYING · SCHOOL</p>
+    <h1>SAFETY REPORTING</h1>
+    <p class="desc">Choose a report type. Add to home screen for one-tap access.</p>
+  </header>
+  <a class="tile" href="./hazard-report.html">
+    <span class="tile-label">Hazard Report</span>
+    <span class="tile-sub">HAZREP</span>
+  </a>
+  <a class="tile" href="./confidential-safety-report.html">
+    <span class="tile-label">Mishap Report</span>
+    <span class="tile-sub">Incident and Accident reports</span>
+  </a>
+  <a class="tile" href="./worker-nomination.html">
+    <span class="tile-label">Worker of the Month</span>
+    <span class="tile-sub">Recognition—Nominate a colleague</span>
+  </a>
+  <p class="eyebrow" style="margin-top:28px;">OFFICIAL USE</p>
+  <a class="tile" href="./print-nomination.html">CFS MANAGEMENT</p>
+    <span class="tile-label">Print Nomination</span>
+    <span class="tile-sub">From downloaded CSV</span>
+  </a>
+  <a class="tile" href="./print-hazrep.html">CFS SAFETY OFFICE</p>
+    <span class="tile-label">Print HAZREP</span>
+    <span class="tile-sub">From downloaded CSV</span>
+  </a>
+  <a class="tile" href="./print-mishap.html">
+    <span class="tile-label">Print MISHAP</span>
+    <span class="tile-sub">From downloaded CSV</span>
+  </a>
+</div>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>
