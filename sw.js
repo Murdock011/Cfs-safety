@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cfs-safety-tools-v8';
+const CACHE_NAME = 'cfs-safety-tools-v9';
 const ASSETS = [
   './',
   './index.html',
@@ -13,6 +13,7 @@ const ASSETS = [
   './apple-touch-icon.png',
   './favicon.ico'
 ];
+// crest.png is the source artwork for the icon set — not precached
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
