@@ -7,6 +7,11 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#14171a">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<meta name="description" content="Hazard, mishap and Worker of the Month reporting for CFS — quick mobile forms.">
 <title>CFS Safety Reporting</title>
 <style>
   :root {
@@ -16,6 +21,7 @@
     --ink-dim: #8b9199;
     --caution: #d99a3d;
     --rule: #2a2f34;
+    --radius: 2px;
   }
   * { box-sizing: border-box; }
   html, body {
@@ -45,9 +51,30 @@
     display: block; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-dim);
   }
   .tile:active { background: var(--panel-raised); }
+
+  #installBanner {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 999;
+    background: var(--panel-raised); border-top: 1px solid var(--rule);
+    padding: 12px 16px; display: none; align-items: center; gap: 12px;
+  }
+  #installBanner.show { display: flex; }
+  #installBanner .msg { flex: 1; color: var(--ink); font-size: 13px; line-height: 1.4; }
+  #installBanner .installBtn {
+    background: var(--ink); color: var(--panel); border: none; border-radius: var(--radius);
+    padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  }
+  #installBanner .closeBtn {
+    background: none; border: none; color: var(--ink-dim); font-size: 20px; cursor: pointer;
+    padding: 0 4px; line-height: 1;
+  }
 </style>
 </head>
 <body>
+<div id="installBanner">
+  <span class="msg" id="installMsg"></span>
+  <button class="installBtn" id="installBtn" style="display:none;">Install</button>
+  <button class="closeBtn" id="installClose">&times;</button>
+</div>
 <div class="wrap">
   <header>
     <p class="eyebrow"> CENTRAL · FLYING · SCHOOL</p>
@@ -72,6 +99,51 @@
     <span class="tile-sub">From downloaded CSV</span>
   </a>
 </div>
+<script>
+  (function() {
+    const KEY = 'cfsInstallDismissed';
+    function isStandalone() {
+      return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    }
+    function isIOS() {
+      return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    }
+    if (isStandalone()) return;
+    let dismissed = false;
+    try { dismissed = localStorage.getItem(KEY) === '1'; } catch (e) {}
+    if (dismissed) return;
+
+    const banner = document.getElementById('installBanner');
+    const msg = document.getElementById('installMsg');
+    const installBtn = document.getElementById('installBtn');
+    const closeBtn = document.getElementById('installClose');
+    let deferredPrompt = null;
+
+    function dismiss() {
+      banner.classList.remove('show');
+      try { localStorage.setItem(KEY, '1'); } catch (e) {}
+    }
+    closeBtn.addEventListener('click', dismiss);
+
+    if (isIOS()) {
+      msg.textContent = '📲 For the best experience, tap the Share icon and select "Add to Home Screen"';
+      banner.classList.add('show');
+    } else {
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        msg.textContent = 'Install this app for one-tap access, even offline.';
+        installBtn.style.display = '';
+        banner.classList.add('show');
+      });
+      installBtn.addEventListener('click', () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(() => dismiss());
+      });
+    }
+  })();
+</script>
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
