@@ -303,7 +303,7 @@
     <button class="secondary" id="sendBtn" style="margin-bottom:10px;">Send as text only</button>
     <button class="secondary" id="copyBtn" style="margin-bottom:10px;">Copy Report Text</button>
     <button class="secondary" id="pdfBtn">Generate PDF only</button>
-    <p class="hint" id="shareHint">On a phone, “Email with PDF attached” builds the PDF and hands it to your mail app with the report already attached — the Safety Office just prints it. On desktop it downloads the PDF and opens a text email for you to attach it to.</p>
+    <p class="hint" id="shareHint">“Email with PDF attached” builds the PDF and hands it to your mail app with the report attached — the Safety Office just prints it. Your mail app opens with an empty “To” — send it to <b id="hintEmail"></b>.</p>
   </div>
 </div>
 
@@ -446,6 +446,7 @@
 <script>
 
   const SAFETY_OFFICE_EMAIL = "Cfssafety22@gmail.com";
+  document.getElementById('hintEmail').textContent = SAFETY_OFFICE_EMAIL;
 
   function makeSegment(id, initial, onChange) {
     const el = document.getElementById(id);
@@ -747,10 +748,16 @@
       const file = new File([blob], name, { type: 'application/pdf' });
       const text = buildReportText();
       const subject = `[MISHAP] ${ddmmyyyy()} — ${typeSeg.get()} — ${categorySeg.get()}`;
+      // Web Share has no recipient field, so carry the address in the body
+      // and put it on the clipboard for the reporter to paste into "To".
+      const shareText = `SEND TO: ${SAFETY_OFFICE_EMAIL}\n\n${text}`;
 
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: subject, text });
-        btn.textContent = 'Sent ✓';
+        try { await navigator.clipboard.writeText(SAFETY_OFFICE_EMAIL); } catch (e) {}
+        await navigator.share({ files: [file], title: subject, text: shareText });
+        btn.textContent = 'Handed to mail app ✓';
+        const h = document.getElementById('shareHint');
+        h.innerHTML = `PDF + report handed to your mail app. In the “To” field enter <b>${SAFETY_OFFICE_EMAIL}</b> — it has been copied to your clipboard, and it is also the first line of the message.`;
       } else {
         // Desktop / no file-share: download the PDF and open a text email to attach it to.
         const url = URL.createObjectURL(blob);
