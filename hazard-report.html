@@ -186,11 +186,11 @@
     </div>
     <div class="field" style="margin-top:16px;"><label for="surname">Surname</label><input type="text" id="surname" placeholder="Mandatory"></div>
     <div class="field"><label for="ext">Ext / Tel</label><input type="text" id="ext" placeholder="Mandatory"></div>
+    <div class="field"><label for="email">Email</label><input type="email" id="email" placeholder="Optional — for follow-up"></div>
   </div>
 
   <div class="actions">
     <button class="primary" id="sendBtn">Send as Email</button>
-    <button class="secondary" id="copyBtn" style="margin-bottom:10px;">Copy Report Text</button>
     <button class="secondary" id="pdfBtn">Generate PDF</button>
     <div class="error" id="formError">Please complete all required fields (highlighted).</div>
     <p class="hint">Generate PDF opens your print dialog — choose "Save as PDF" to get a file, or print directly. Attach the saved file to your email manually if you want both together.</p>
@@ -283,10 +283,10 @@
 </div>
 
 <script>
-  const SAFETY_OFFICE_EMAIL = "Cfssafety22@gmail.com";
+  const SAFETY_OFFICE_EMAIL = "gerhard.duminy@gmail.com";
   // Deploy apps-script/Code.gs as a Web App (Execute as: Me, Access: Anyone)
   // and paste the deployment URL here to enable photo attachments.
-  const APPS_SCRIPT_URL = "";
+  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyL6mjvPjYk7uktuyhp0BsdQYI9scG4_yuC6VE95gl3y0vO498hO3gGT0C_WYRo5ZKF/exec";
 
   const typeSegment = document.getElementById('typeSegment');
   let hazardCategory = 'Flying';
@@ -336,7 +336,8 @@
       rank: document.getElementById('rank').value.trim(),
       initials: document.getElementById('initials').value.trim(),
       surname: document.getElementById('surname').value.trim(),
-      ext: document.getElementById('ext').value.trim()
+      ext: document.getElementById('ext').value.trim(),
+      email: document.getElementById('email').value.trim()
     };
   }
 
@@ -359,6 +360,7 @@
     lines.push(`Initials: ${f.initials}`);
     lines.push(`Surname: ${f.surname}`);
     lines.push(`Ext/Tel: ${f.ext}`);
+    if (f.email) lines.push(`Email: ${f.email}`);
     return lines.join('\n');
   }
 
@@ -427,24 +429,6 @@
       btn.disabled = false;
       setTimeout(() => { btn.textContent = label; }, 4000);
     }
-  });
-
-  document.getElementById('copyBtn').addEventListener('click', async () => {
-    if (!validate()) return;
-    const text = buildReportText();
-    const btn = document.getElementById('copyBtn');
-    try {
-      await navigator.clipboard.writeText(text);
-      btn.textContent = 'Copied \u2713';
-    } catch (err) {
-      const ta = document.createElement('textarea');
-      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
-      document.body.appendChild(ta); ta.select();
-      try { document.execCommand('copy'); btn.textContent = 'Copied \u2713'; }
-      catch (e) { btn.textContent = 'Copy failed'; }
-      document.body.removeChild(ta);
-    }
-    setTimeout(() => { btn.textContent = 'Copy Report Text'; }, 2500);
   });
 
   document.getElementById('pdfBtn').addEventListener('click', () => {
