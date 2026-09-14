@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cfs-safety-tools-v9';
+const CACHE_NAME = 'cfs-safety-tools-v10';
 const ASSETS = [
   './',
   './index.html',
@@ -11,7 +11,8 @@ const ASSETS = [
   './icon-512.png',
   './icon-maskable-512.png',
   './apple-touch-icon.png',
-  './favicon.ico'
+  './favicon.ico',
+  './vendor/html2pdf.bundle.min.js'
 ];
 // crest.png is the source artwork for the icon set — not precached
 
