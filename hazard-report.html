@@ -100,26 +100,28 @@
     padding: 0 4px; line-height: 1;
   }
 
-  #printTemplate { display: none; }
+  /* Print document — always laid out (so html2pdf can capture it) but
+     parked off-screen until the print dialog or PDF export needs it. */
+  #printTemplate {
+    position: fixed; left: -10000px; top: 0; width: 794px; z-index: -1;
+    background: #fff; color: #000; padding: 30px; font-size: 11px; line-height: 1.4;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  #printTemplate table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+  #printTemplate td, #printTemplate th { border: 1px solid #888; padding: 4px 6px; vertical-align: top; }
+  #printTemplate th { background: #eee; font-weight: 700; text-align: left; }
+  #printTemplate .letterhead-wrap { position: relative; margin-bottom: 14px; }
+  #printTemplate h2 { font-size: 14px; text-align: center; margin: 0; }
+  #printTemplate .ref { position: absolute; top: 0; right: 0; font-size: 10px; text-align: right; color: #555; margin: 0; }
+  #printTemplate .label { font-weight: 700; font-size: 9px; text-transform: uppercase; color: #444; }
+  #printTemplate .box { display: inline-block; width: 13px; height: 13px; border: 1px solid #333; text-align: center; line-height: 12px; font-weight: 800; font-size: 10px; margin-left: 5px; }
+  #printTemplate .h1num { font-weight: 700; font-size: 12px; margin: 14px 0 6px; }
+  #printTemplate .h2num { font-weight: 700; font-size: 11px; margin: 10px 0 4px 8px; }
+  #printTemplate .body-box { min-height: 50px; white-space: pre-wrap; }
+
   @media print {
-    body * { visibility: hidden; }
-    #printTemplate, #printTemplate * { visibility: visible; }
-    #printTemplate {
-      display: block; position: absolute; left: 0; top: 0; width: 100%;
-      background: #fff; color: #000; padding: 30px; font-size: 11px; line-height: 1.4;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }
-    #printTemplate table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
-    #printTemplate td, #printTemplate th { border: 1px solid #888; padding: 4px 6px; vertical-align: top; }
-    #printTemplate th { background: #eee; font-weight: 700; text-align: left; }
-    #printTemplate .letterhead-wrap { position: relative; margin-bottom: 14px; }
-    #printTemplate h2 { font-size: 14px; text-align: center; margin: 0; }
-    #printTemplate .ref { position: absolute; top: 0; right: 0; font-size: 10px; text-align: right; color: #555; margin: 0; }
-    #printTemplate .label { font-weight: 700; font-size: 9px; text-transform: uppercase; color: #444; }
-    #printTemplate .box { display: inline-block; width: 13px; height: 13px; border: 1px solid #333; text-align: center; line-height: 12px; font-weight: 800; font-size: 10px; margin-left: 5px; }
-    #printTemplate .h1num { font-weight: 700; font-size: 12px; margin: 14px 0 6px; }
-    #printTemplate .h2num { font-weight: 700; font-size: 11px; margin: 10px 0 4px 8px; }
-    #printTemplate .body-box { min-height: 50px; white-space: pre-wrap; }
+    body > *:not(#printTemplate) { display: none !important; }
+    #printTemplate { position: static; left: auto; width: 100%; z-index: auto; }
     @page { margin: 12mm; }
   }
 </style>
@@ -174,7 +176,7 @@
   <div class="logline">
     <label for="photos">2.3. Photos</label>
     <input type="file" id="photos" accept="image/*" capture="environment" multiple>
-    <p class="hint">Optional. If you attach photos, "Send as Email" uploads them straight to the Safety Office — no re-attaching needed.</p>
+    <p class="hint">Optional. "Send as Email" always attaches a filled-in PDF of this form, plus any photos here — the Safety Office doesn't need to retype anything.</p>
   </div>
 
   <div class="confidential">
@@ -282,6 +284,7 @@
   </table>
 </div>
 
+<script src="./vendor/html2pdf.bundle.min.js" defer></script>
 <script>
   const SAFETY_OFFICE_EMAIL = "gerhard.duminy@gmail.com";
   // Deploy apps-script/Code.gs as a Web App (Execute as: Me, Access: Anyone)
@@ -402,28 +405,33 @@
     const files = Array.from(document.getElementById('photos').files);
     const btn = document.getElementById('sendBtn');
 
-    if (!files.length || !APPS_SCRIPT_URL) {
+    if (!APPS_SCRIPT_URL) {
       window.location.href = `mailto:${SAFETY_OFFICE_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
       return;
     }
 
     const label = btn.textContent;
     btn.disabled = true;
-    btn.textContent = 'Uploading photos…';
     try {
+      btn.textContent = 'Building PDF…';
+      const pdfBlob = await buildPdfBlob();
+      const pdf = { name: pdfFilename(), type: 'application/pdf', base64: await fileToBase64(pdfBlob) };
+
+      btn.textContent = files.length ? 'Uploading…' : 'Sending…';
       const photos = await Promise.all(files.map(async (f) => ({
         name: f.name, type: f.type, base64: await fileToBase64(f)
       })));
+
       const res = await fetch(APPS_SCRIPT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids a CORS preflight to Apps Script
-        body: JSON.stringify({ to: SAFETY_OFFICE_EMAIL, subject, body: text, photos })
+        body: JSON.stringify({ to: SAFETY_OFFICE_EMAIL, subject, body: text, pdf, photos })
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
-      btn.textContent = 'Sent with photos ✓';
+      btn.textContent = 'Sent with PDF ✓';
     } catch (err) {
       console.error(err);
-      alert('Could not upload photos (' + err.message + '). Opening a text-only email instead — attach the photos to it manually.');
+      alert('Could not send with PDF (' + err.message + '). Opening a text-only email instead.');
       window.location.href = `mailto:${SAFETY_OFFICE_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
     } finally {
       btn.disabled = false;
@@ -431,8 +439,7 @@
     }
   });
 
-  document.getElementById('pdfBtn').addEventListener('click', () => {
-    if (!validate()) return;
+  function populatePrintTemplate() {
     const f = collectFields();
     document.getElementById('p-finyear').textContent = finYear(new Date());
     document.getElementById('p-section').textContent = f.section;
@@ -453,7 +460,51 @@
     document.getElementById('chk-nonflying').textContent = '';
     document.getElementById(hazardCategory === 'Flying' ? 'chk-flying' : 'chk-nonflying').textContent = 'X';
     document.getElementById('chk-ohs').textContent = f.ohs ? 'X' : '';
+  }
 
+  function pdfFilename() {
+    return (`HAZREP ${isoDate(new Date())} ${hazardCategory}`
+      .replace(/[^\w .-]/g, '').trim() || 'HAZREP') + '.pdf';
+  }
+
+  async function buildPdfBlob() {
+    populatePrintTemplate();
+    const el = document.getElementById('printTemplate');
+    // html2canvas captures the element at its real document position, and a
+    // `position:fixed` element collapses to 0 height inside its clone
+    // container — so switch to absolute + explicit size for the capture.
+    const saved = { position: el.style.position, left: el.style.left, top: el.style.top, zIndex: el.style.zIndex };
+    const scrollY = window.scrollY;
+    el.style.position = 'absolute';
+    el.style.left = '0';
+    el.style.top = '0';
+    el.style.zIndex = '-1';
+    window.scrollTo(0, 0);
+    const w = el.offsetWidth, h = el.scrollHeight;
+    const opt = {
+      margin: 8,
+      image: { type: 'jpeg', quality: 0.95 },
+      html2canvas: {
+        scale: 2, backgroundColor: '#ffffff', useCORS: true,
+        x: 0, y: 0, scrollX: 0, scrollY: 0, width: w, height: h, windowWidth: w, windowHeight: h
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'] }
+    };
+    try {
+      return await html2pdf().set(opt).from(el).outputPdf('blob');
+    } finally {
+      el.style.position = saved.position || 'fixed';
+      el.style.left = saved.left || '-10000px';
+      el.style.top = saved.top || '0';
+      el.style.zIndex = saved.zIndex || '-1';
+      window.scrollTo(0, scrollY);
+    }
+  }
+
+  document.getElementById('pdfBtn').addEventListener('click', () => {
+    if (!validate()) return;
+    populatePrintTemplate();
     window.print();
   });
 </script>
