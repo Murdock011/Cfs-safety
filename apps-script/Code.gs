@@ -9,6 +9,9 @@ function doPost(e) {
     const attachments = (data.photos || []).map((p) =>
       Utilities.newBlob(Utilities.base64Decode(p.base64), p.type || 'image/jpeg', p.name || 'photo.jpg')
     );
+    if (data.pdf) {
+      attachments.push(Utilities.newBlob(Utilities.base64Decode(data.pdf.base64), data.pdf.type || 'application/pdf', data.pdf.name || 'report.pdf'));
+    }
     MailApp.sendEmail({
       to: data.to,
       subject: data.subject || 'CFS Report',
