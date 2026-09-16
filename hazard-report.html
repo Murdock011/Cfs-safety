@@ -11,6 +11,7 @@
 <link rel="icon" href="./favicon.ico" sizes="any">
 <link rel="icon" type="image/png" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="stylesheet" href="./shared.css">
 <meta name="description" content="File a CFS hazard report (HAZREP) — quick mobile form for the Safety Office.">
 <title>HAZREP</title>
 <style>
@@ -38,7 +39,7 @@
     display: block; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
     color: var(--ink-dim); margin-bottom: 10px;
   }
-  input[type="text"], textarea {
+  input[type="text"], input[type="email"], input[type="file"], textarea {
     width: 100%; padding: 11px 12px; font-size: 16px; font-family: inherit;
     border: 1px solid var(--rule); border-radius: var(--radius);
     background: var(--panel-raised); color: var(--ink);
@@ -47,6 +48,11 @@
   input::placeholder, textarea::placeholder { color: #565c62; }
   input:focus, textarea:focus {
     outline: none; border-color: var(--ink-dim); box-shadow: 0 0 0 1px var(--ink-dim);
+  }
+  input[type="file"]::file-selector-button {
+    font-family: inherit; font-size: 13px; margin-right: 10px; padding: 6px 10px;
+    border: 1px solid var(--rule); border-radius: var(--radius);
+    background: var(--panel); color: var(--ink); cursor: pointer;
   }
   textarea { resize: none; overflow-y: hidden; min-height: 110px; line-height: 1.5; }
   .segmented { display: flex; border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden; }
@@ -84,21 +90,6 @@
   .error.show { display: block; }
   .hint { font-size: 11px; color: var(--ink-dim); margin-top: 8px; line-height: 1.4; }
 
-  #installBanner {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 999;
-    background: var(--panel-raised); border-top: 1px solid var(--rule);
-    padding: 12px 16px; display: none; align-items: center; gap: 12px;
-  }
-  #installBanner.show { display: flex; }
-  #installBanner .msg { flex: 1; color: var(--ink); font-size: 13px; line-height: 1.4; }
-  #installBanner .installBtn {
-    background: var(--ink); color: var(--panel); border: none; border-radius: var(--radius);
-    padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
-  }
-  #installBanner .closeBtn {
-    background: none; border: none; color: var(--ink-dim); font-size: 20px; cursor: pointer;
-    padding: 0 4px; line-height: 1;
-  }
 
   /* Print document — always laid out (so html2pdf can capture it) but
      parked off-screen until the print dialog or PDF export needs it. */
@@ -285,6 +276,7 @@
 </div>
 
 <script src="./vendor/html2pdf.bundle.min.js" defer></script>
+<script src="./shared.js"></script>
 <script>
   const SAFETY_OFFICE_EMAIL = "gerhard.duminy@gmail.com";
   // Deploy apps-script/Code.gs as a Web App (Execute as: Me, Access: Anyone)
@@ -299,34 +291,6 @@
     typeSegment.querySelectorAll('button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     hazardCategory = btn.dataset.value;
-  });
-
-  const dtgEl = document.getElementById('dtg');
-  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  function pad(n) { return String(n).padStart(2, '0'); }
-  function bravoDate(d) { return new Date(d.getTime() + 2 * 60 * 60000); }
-  function formatDTG(d) {
-    const b = bravoDate(d);
-    return `${pad(b.getUTCDate())}${pad(b.getUTCHours())}${pad(b.getUTCMinutes())}B ${MONTHS[b.getUTCMonth()]} ${pad(b.getUTCFullYear() % 100)}`;
-  }
-  function isoDate(d) {
-    const b = bravoDate(d);
-    return `${b.getUTCFullYear()}-${pad(b.getUTCMonth() + 1)}-${pad(b.getUTCDate())}`;
-  }
-  function finYear(d) {
-    const b = bravoDate(d);
-    const y = b.getUTCFullYear(), m = b.getUTCMonth() + 1;
-    const start = (m >= 4) ? y : y - 1;
-    return `${String(start).slice(2)}/${String(start + 1).slice(2)}`;
-  }
-  function tickDTG() { dtgEl.textContent = formatDTG(new Date()); }
-  tickDTG();
-  setInterval(tickDTG, 1000);
-
-  function autoGrow(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
-  document.querySelectorAll('textarea').forEach(el => {
-    autoGrow(el);
-    el.addEventListener('input', () => autoGrow(el));
   });
 
   function collectFields() {
@@ -405,11 +369,6 @@
     const files = Array.from(document.getElementById('photos').files);
     const btn = document.getElementById('sendBtn');
 
-    if (!APPS_SCRIPT_URL) {
-      window.location.href = `mailto:${SAFETY_OFFICE_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
-      return;
-    }
-
     const label = btn.textContent;
     btn.disabled = true;
     try {
@@ -425,7 +384,12 @@
       const res = await fetch(APPS_SCRIPT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids a CORS preflight to Apps Script
-        body: JSON.stringify({ to: SAFETY_OFFICE_EMAIL, subject, body: text, pdf, photos })
+        body: JSON.stringify({
+          to: SAFETY_OFFICE_EMAIL, subject, body: text, pdf, photos
+          // Reporter confirmation email — commented out pending go-ahead. To activate, uncomment
+          // this and the matching block in apps-script/Code.gs.
+          // , confirmTo: document.getElementById('email').value.trim() || undefined
+        })
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       btn.textContent = 'Sent with PDF ✓';
@@ -507,59 +471,6 @@
     populatePrintTemplate();
     window.print();
   });
-</script>
-
-<script>
-  (function() {
-    const KEY = 'cfsInstallDismissed';
-    function isStandalone() {
-      return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-    }
-    function isIOS() {
-      return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    }
-    if (isStandalone()) return;
-    let dismissed = false;
-    try { dismissed = localStorage.getItem(KEY) === '1'; } catch (e) {}
-    if (dismissed) return;
-
-    const banner = document.getElementById('installBanner');
-    const msg = document.getElementById('installMsg');
-    const installBtn = document.getElementById('installBtn');
-    const closeBtn = document.getElementById('installClose');
-    let deferredPrompt = null;
-
-    function dismiss() {
-      banner.classList.remove('show');
-      try { localStorage.setItem(KEY, '1'); } catch (e) {}
-    }
-    closeBtn.addEventListener('click', dismiss);
-
-    if (isIOS()) {
-      msg.textContent = '\uD83D\uDCF2 For the best experience, tap the Share icon and select "Add to Home Screen"';
-      banner.classList.add('show');
-    } else {
-      window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        msg.textContent = 'Install this app for one-tap access, even offline.';
-        installBtn.style.display = '';
-        banner.classList.add('show');
-      });
-      installBtn.addEventListener('click', () => {
-        if (!deferredPrompt) return;
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then(() => dismiss());
-      });
-    }
-  })();
-</script>
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
-    });
-  }
 </script>
 </body>
 </html>
