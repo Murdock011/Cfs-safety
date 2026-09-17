@@ -8,6 +8,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#14171a">
 <link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="stylesheet" href="./shared.css">
+<meta name="description" content="File a CFS hazard report (HAZREP) — quick mobile form for the Safety Office.">
 <title>HAZREP</title>
 <style>
   :root {
@@ -34,7 +39,7 @@
     display: block; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
     color: var(--ink-dim); margin-bottom: 10px;
   }
-  input[type="text"], textarea {
+  input[type="text"], input[type="email"], input[type="file"], textarea {
     width: 100%; padding: 11px 12px; font-size: 16px; font-family: inherit;
     border: 1px solid var(--rule); border-radius: var(--radius);
     background: var(--panel-raised); color: var(--ink);
@@ -43,6 +48,11 @@
   input::placeholder, textarea::placeholder { color: #565c62; }
   input:focus, textarea:focus {
     outline: none; border-color: var(--ink-dim); box-shadow: 0 0 0 1px var(--ink-dim);
+  }
+  input[type="file"]::file-selector-button {
+    font-family: inherit; font-size: 13px; margin-right: 10px; padding: 6px 10px;
+    border: 1px solid var(--rule); border-radius: var(--radius);
+    background: var(--panel); color: var(--ink); cursor: pointer;
   }
   textarea { resize: none; overflow-y: hidden; min-height: 110px; line-height: 1.5; }
   .segmented { display: flex; border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden; }
@@ -80,42 +90,29 @@
   .error.show { display: block; }
   .hint { font-size: 11px; color: var(--ink-dim); margin-top: 8px; line-height: 1.4; }
 
-  #installBanner {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 999;
-    background: var(--panel-raised); border-top: 1px solid var(--rule);
-    padding: 12px 16px; display: none; align-items: center; gap: 12px;
-  }
-  #installBanner.show { display: flex; }
-  #installBanner .msg { flex: 1; color: var(--ink); font-size: 13px; line-height: 1.4; }
-  #installBanner .installBtn {
-    background: var(--ink); color: var(--panel); border: none; border-radius: var(--radius);
-    padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
-  }
-  #installBanner .closeBtn {
-    background: none; border: none; color: var(--ink-dim); font-size: 20px; cursor: pointer;
-    padding: 0 4px; line-height: 1;
-  }
 
-  #printTemplate { display: none; }
+  /* Print document — always laid out (so html2pdf can capture it) but
+     parked off-screen until the print dialog or PDF export needs it. */
+  #printTemplate {
+    position: fixed; left: -10000px; top: 0; width: 794px; z-index: -1;
+    background: #fff; color: #000; padding: 30px; font-size: 11px; line-height: 1.4;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  #printTemplate table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+  #printTemplate td, #printTemplate th { border: 1px solid #888; padding: 4px 6px; vertical-align: top; }
+  #printTemplate th { background: #eee; font-weight: 700; text-align: left; }
+  #printTemplate .letterhead-wrap { position: relative; margin-bottom: 14px; }
+  #printTemplate h2 { font-size: 14px; text-align: center; margin: 0; }
+  #printTemplate .ref { position: absolute; top: 0; right: 0; font-size: 10px; text-align: right; color: #555; margin: 0; }
+  #printTemplate .label { font-weight: 700; font-size: 9px; text-transform: uppercase; color: #444; }
+  #printTemplate .box { display: inline-block; width: 13px; height: 13px; border: 1px solid #333; text-align: center; line-height: 12px; font-weight: 800; font-size: 10px; margin-left: 5px; }
+  #printTemplate .h1num { font-weight: 700; font-size: 12px; margin: 14px 0 6px; }
+  #printTemplate .h2num { font-weight: 700; font-size: 11px; margin: 10px 0 4px 8px; }
+  #printTemplate .body-box { min-height: 50px; white-space: pre-wrap; }
+
   @media print {
-    body * { visibility: hidden; }
-    #printTemplate, #printTemplate * { visibility: visible; }
-    #printTemplate {
-      display: block; position: absolute; left: 0; top: 0; width: 100%;
-      background: #fff; color: #000; padding: 30px; font-size: 11px; line-height: 1.4;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }
-    #printTemplate table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
-    #printTemplate td, #printTemplate th { border: 1px solid #888; padding: 4px 6px; vertical-align: top; }
-    #printTemplate th { background: #eee; font-weight: 700; text-align: left; }
-    #printTemplate .letterhead-wrap { position: relative; margin-bottom: 14px; }
-    #printTemplate h2 { font-size: 14px; text-align: center; margin: 0; }
-    #printTemplate .ref { position: absolute; top: 0; right: 0; font-size: 10px; text-align: right; color: #555; margin: 0; }
-    #printTemplate .label { font-weight: 700; font-size: 9px; text-transform: uppercase; color: #444; }
-    #printTemplate .box { display: inline-block; width: 13px; height: 13px; border: 1px solid #333; text-align: center; line-height: 12px; font-weight: 800; font-size: 10px; margin-left: 5px; }
-    #printTemplate .h1num { font-weight: 700; font-size: 12px; margin: 14px 0 6px; }
-    #printTemplate .h2num { font-weight: 700; font-size: 11px; margin: 10px 0 4px 8px; }
-    #printTemplate .body-box { min-height: 50px; white-space: pre-wrap; }
+    body > *:not(#printTemplate) { display: none !important; }
+    #printTemplate { position: static; left: auto; width: 100%; z-index: auto; }
     @page { margin: 12mm; }
   }
 </style>
@@ -167,6 +164,12 @@
     <textarea id="remedy" placeholder="Mandatory — Recommended resolution"></textarea>
   </div>
 
+  <div class="logline">
+    <label for="photos">2.3. Photos</label>
+    <input type="file" id="photos" accept="image/*" capture="environment" multiple>
+    <p class="hint">Optional. "Send as Email" always attaches a filled-in PDF of this form, plus any photos here — the Safety Office doesn't need to retype anything.</p>
+  </div>
+
   <div class="confidential">
     <p class="tag">Confidential — follow-up</p>
     <div class="field"><label for="forceNo">Force No / ID</label><input type="text" id="forceNo" placeholder="Mandatory"></div>
@@ -176,11 +179,11 @@
     </div>
     <div class="field" style="margin-top:16px;"><label for="surname">Surname</label><input type="text" id="surname" placeholder="Mandatory"></div>
     <div class="field"><label for="ext">Ext / Tel</label><input type="text" id="ext" placeholder="Mandatory"></div>
+    <div class="field"><label for="email">Email</label><input type="email" id="email" placeholder="Optional — for follow-up"></div>
   </div>
 
   <div class="actions">
     <button class="primary" id="sendBtn">Send as Email</button>
-    <button class="secondary" id="copyBtn" style="margin-bottom:10px;">Copy Report Text</button>
     <button class="secondary" id="pdfBtn">Generate PDF</button>
     <div class="error" id="formError">Please complete all required fields (highlighted).</div>
     <p class="hint">Generate PDF opens your print dialog — choose "Save as PDF" to get a file, or print directly. Attach the saved file to your email manually if you want both together.</p>
@@ -272,8 +275,15 @@
   </table>
 </div>
 
+<script src="./vendor/html2pdf.bundle.min.js" defer></script>
+<script src="./shared.js"></script>
 <script>
   const SAFETY_OFFICE_EMAIL = "Cfssafety22@gmail.com";
+  // Deploy apps-script/Code.gs as a Web App (Execute as: Me, Access: Anyone)
+  // and paste the deployment URL here to enable photo attachments.
+  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyDVk6oNl8xfDBxG3oLdJnYLNgrf_atA3TkHLDug6ndmPuT7FCYSobSF2yOAuPzGOGI/exec";
+  // Must match the SUBMIT_SECRET Script Property set on the Apps Script project.
+  const SUBMIT_TOKEN = "e261964412c8249b9e14d62775843e78";
 
   const typeSegment = document.getElementById('typeSegment');
   let hazardCategory = 'Flying';
@@ -283,34 +293,6 @@
     typeSegment.querySelectorAll('button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     hazardCategory = btn.dataset.value;
-  });
-
-  const dtgEl = document.getElementById('dtg');
-  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  function pad(n) { return String(n).padStart(2, '0'); }
-  function bravoDate(d) { return new Date(d.getTime() + 2 * 60 * 60000); }
-  function formatDTG(d) {
-    const b = bravoDate(d);
-    return `${pad(b.getUTCDate())}${pad(b.getUTCHours())}${pad(b.getUTCMinutes())}B ${MONTHS[b.getUTCMonth()]} ${pad(b.getUTCFullYear() % 100)}`;
-  }
-  function isoDate(d) {
-    const b = bravoDate(d);
-    return `${b.getUTCFullYear()}-${pad(b.getUTCMonth() + 1)}-${pad(b.getUTCDate())}`;
-  }
-  function finYear(d) {
-    const b = bravoDate(d);
-    const y = b.getUTCFullYear(), m = b.getUTCMonth() + 1;
-    const start = (m >= 4) ? y : y - 1;
-    return `${String(start).slice(2)}/${String(start + 1).slice(2)}`;
-  }
-  function tickDTG() { dtgEl.textContent = formatDTG(new Date()); }
-  tickDTG();
-  setInterval(tickDTG, 1000);
-
-  function autoGrow(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
-  document.querySelectorAll('textarea').forEach(el => {
-    autoGrow(el);
-    el.addEventListener('input', () => autoGrow(el));
   });
 
   function collectFields() {
@@ -323,7 +305,8 @@
       rank: document.getElementById('rank').value.trim(),
       initials: document.getElementById('initials').value.trim(),
       surname: document.getElementById('surname').value.trim(),
-      ext: document.getElementById('ext').value.trim()
+      ext: document.getElementById('ext').value.trim(),
+      email: document.getElementById('email').value.trim()
     };
   }
 
@@ -346,6 +329,7 @@
     lines.push(`Initials: ${f.initials}`);
     lines.push(`Surname: ${f.surname}`);
     lines.push(`Ext/Tel: ${f.ext}`);
+    if (f.email) lines.push(`Email: ${f.email}`);
     return lines.join('\n');
   }
 
@@ -370,35 +354,58 @@
     return true;
   }
 
-  document.getElementById('sendBtn').addEventListener('click', () => {
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result.split(',')[1]);
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+  }
+
+  document.getElementById('sendBtn').addEventListener('click', async () => {
     if (!validate()) return;
     const text = buildReportText();
     const ohsFlag = document.getElementById('ohs').checked ? ' — OHS' : '';
-    const subject = encodeURIComponent(`[HAZREP] ${isoDate(new Date())} \u2014 ${hazardCategory}${ohsFlag}`);
-    const body = encodeURIComponent(text);
-    window.location.href = `mailto:${SAFETY_OFFICE_EMAIL}?subject=${subject}&body=${body}`;
-  });
+    const subject = `[HAZREP] ${isoDate(new Date())} \u2014 ${hazardCategory}${ohsFlag}`;
+    const files = Array.from(document.getElementById('photos').files);
+    const btn = document.getElementById('sendBtn');
 
-  document.getElementById('copyBtn').addEventListener('click', async () => {
-    if (!validate()) return;
-    const text = buildReportText();
-    const btn = document.getElementById('copyBtn');
+    const label = btn.textContent;
+    btn.disabled = true;
     try {
-      await navigator.clipboard.writeText(text);
-      btn.textContent = 'Copied \u2713';
+      btn.textContent = 'Building PDF…';
+      const pdfBlob = await buildPdfBlob();
+      const pdf = { name: pdfFilename(), type: 'application/pdf', base64: await fileToBase64(pdfBlob) };
+
+      btn.textContent = files.length ? 'Uploading…' : 'Sending…';
+      const photos = await Promise.all(files.map(async (f) => ({
+        name: f.name, type: f.type, base64: await fileToBase64(f)
+      })));
+
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids a CORS preflight to Apps Script
+        body: JSON.stringify({
+          secret: SUBMIT_TOKEN, to: SAFETY_OFFICE_EMAIL, subject, body: text, pdf, photos
+          // Reporter confirmation email — commented out pending go-ahead. To activate, uncomment
+          // this and the matching block in apps-script/Code.gs.
+          // , confirmTo: document.getElementById('email').value.trim() || undefined
+        })
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      btn.textContent = 'Sent with PDF ✓';
     } catch (err) {
-      const ta = document.createElement('textarea');
-      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
-      document.body.appendChild(ta); ta.select();
-      try { document.execCommand('copy'); btn.textContent = 'Copied \u2713'; }
-      catch (e) { btn.textContent = 'Copy failed'; }
-      document.body.removeChild(ta);
+      console.error(err);
+      alert('Could not send with PDF (' + err.message + '). Opening a text-only email instead.');
+      window.location.href = `mailto:${SAFETY_OFFICE_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+    } finally {
+      btn.disabled = false;
+      setTimeout(() => { btn.textContent = label; }, 4000);
     }
-    setTimeout(() => { btn.textContent = 'Copy Report Text'; }, 2500);
   });
 
-  document.getElementById('pdfBtn').addEventListener('click', () => {
-    if (!validate()) return;
+  function populatePrintTemplate() {
     const f = collectFields();
     document.getElementById('p-finyear').textContent = finYear(new Date());
     document.getElementById('p-section').textContent = f.section;
@@ -419,62 +426,53 @@
     document.getElementById('chk-nonflying').textContent = '';
     document.getElementById(hazardCategory === 'Flying' ? 'chk-flying' : 'chk-nonflying').textContent = 'X';
     document.getElementById('chk-ohs').textContent = f.ohs ? 'X' : '';
+  }
 
+  function pdfFilename() {
+    return (`HAZREP ${isoDate(new Date())} ${hazardCategory}`
+      .replace(/[^\w .-]/g, '').trim() || 'HAZREP') + '.pdf';
+  }
+
+  async function buildPdfBlob() {
+    populatePrintTemplate();
+    const el = document.getElementById('printTemplate');
+    // html2canvas captures the element at its real document position, and a
+    // `position:fixed` element collapses to 0 height inside its clone
+    // container — so switch to absolute + explicit size for the capture.
+    const saved = { position: el.style.position, left: el.style.left, top: el.style.top, zIndex: el.style.zIndex };
+    const scrollY = window.scrollY;
+    el.style.position = 'absolute';
+    el.style.left = '0';
+    el.style.top = '0';
+    el.style.zIndex = '-1';
+    window.scrollTo(0, 0);
+    const w = el.offsetWidth, h = el.scrollHeight;
+    const opt = {
+      margin: 8,
+      image: { type: 'jpeg', quality: 0.95 },
+      html2canvas: {
+        scale: 2, backgroundColor: '#ffffff', useCORS: true,
+        x: 0, y: 0, scrollX: 0, scrollY: 0, width: w, height: h, windowWidth: w, windowHeight: h
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'] }
+    };
+    try {
+      return await html2pdf().set(opt).from(el).outputPdf('blob');
+    } finally {
+      el.style.position = saved.position || 'fixed';
+      el.style.left = saved.left || '-10000px';
+      el.style.top = saved.top || '0';
+      el.style.zIndex = saved.zIndex || '-1';
+      window.scrollTo(0, scrollY);
+    }
+  }
+
+  document.getElementById('pdfBtn').addEventListener('click', () => {
+    if (!validate()) return;
+    populatePrintTemplate();
     window.print();
   });
-</script>
-
-<script>
-  (function() {
-    const KEY = 'cfsInstallDismissed';
-    function isStandalone() {
-      return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-    }
-    function isIOS() {
-      return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    }
-    if (isStandalone()) return;
-    let dismissed = false;
-    try { dismissed = localStorage.getItem(KEY) === '1'; } catch (e) {}
-    if (dismissed) return;
-
-    const banner = document.getElementById('installBanner');
-    const msg = document.getElementById('installMsg');
-    const installBtn = document.getElementById('installBtn');
-    const closeBtn = document.getElementById('installClose');
-    let deferredPrompt = null;
-
-    function dismiss() {
-      banner.classList.remove('show');
-      try { localStorage.setItem(KEY, '1'); } catch (e) {}
-    }
-    closeBtn.addEventListener('click', dismiss);
-
-    if (isIOS()) {
-      msg.textContent = '\uD83D\uDCF2 For the best experience, tap the Share icon and select "Add to Home Screen"';
-      banner.classList.add('show');
-    } else {
-      window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        msg.textContent = 'Install this app for one-tap access, even offline.';
-        installBtn.style.display = '';
-        banner.classList.add('show');
-      });
-      installBtn.addEventListener('click', () => {
-        if (!deferredPrompt) return;
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then(() => dismiss());
-      });
-    }
-  })();
-</script>
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
-    });
-  }
 </script>
 </body>
 </html>

@@ -8,6 +8,11 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#14171a">
 <link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="stylesheet" href="./shared.css">
+<meta name="description" content="File a CFS mishap / incident report — initial facts for UASO / BASCO.">
 <title>Mishap Report</title>
 <style>
   :root {
@@ -34,7 +39,7 @@
     display: block; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
     color: var(--ink-dim); margin-bottom: 10px;
   }
-  input[type="text"], input[type="datetime-local"], textarea, select {
+  input[type="text"], input[type="email"], input[type="datetime-local"], textarea, select {
     width: 100%; padding: 11px 12px; font-size: 16px; font-family: inherit;
     border: 1px solid var(--rule); border-radius: var(--radius);
     background: var(--panel-raised); color: var(--ink);
@@ -94,57 +99,49 @@
   .error.show { display: block; }
   .hint { font-size: 11px; color: var(--ink-dim); margin-top: 8px; line-height: 1.4; }
 
-  #installBanner {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 999;
-    background: var(--panel-raised); border-top: 1px solid var(--rule);
-    padding: 12px 16px; display: none; align-items: center; gap: 12px;
+  /* Always laid out (so html2pdf can capture it for the email attachment)
+     but parked off-screen until the print dialog or PDF export needs it. */
+  #printTemplate {
+    position: fixed; left: -10000px; top: 0; width: 794px; z-index: -1;
+    background: #fff; color: #000; padding: 10px; font-size: 10px; line-height: 1.25;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
-  #installBanner.show { display: flex; }
-  #installBanner .msg { flex: 1; color: var(--ink); font-size: 13px; line-height: 1.4; }
-  #installBanner .installBtn {
-    background: var(--ink); color: var(--panel); border: none; border-radius: var(--radius);
-    padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
-  }
-  #installBanner .closeBtn {
-    background: none; border: none; color: var(--ink-dim); font-size: 20px; cursor: pointer;
-    padding: 0 4px; line-height: 1;
-  }
+  /* One A4 page is ~1123px tall at this element's 794px = 210mm scale, but
+     html2canvas's clone rounds sub-pixels slightly differently than the live
+     page, so a min-height that tight bled ~20px onto a 3rd page. Leave a
+     safety margin below one page height. Flex + margin-top:auto on the
+     footer pins it to the bottom of that space rather than the content end. */
+  #printTemplate .page { min-height: 1060px; display: flex; flex-direction: column; }
+  /* No divider styling here — page-break-before already splits the pages
+     cleanly; extra border/padding/margin broke the symmetry that keeps each
+     .page's fixed height lined up with the actual physical page boundary. */
+  #printTemplate .page + .page { page-break-before: always; }
+  #printTemplate .fixed-footer { background: #fff; margin-top: auto; }
+  #printTemplate .fixed-footer table { margin-bottom: 0; }
+  #printTemplate table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+  #printTemplate td, #printTemplate th { border: 1px solid #888; padding: 3px 5px; vertical-align: top; }
+  #printTemplate th { background: #eee; font-weight: 700; text-align: left; }
+  #printTemplate .center { text-align: center; }
+  #printTemplate .h-title { font-size: 13px; font-weight: 700; text-align: center; margin: 0; }
+  #printTemplate .h-sub { font-size: 9px; text-align: right; margin: -14px 0 6px; }
+  #printTemplate .fileref { font-size: 9px; text-align: center; margin: 4px 0 6px; }
+  #printTemplate .noborder-box { border: 1px solid #888; padding: 3px; margin-bottom: 5px; min-height: 30px; font-size: 8px; color: #888; }
+  #printTemplate .item-num { font-weight: 700; }
+  #printTemplate .fixed { color: #333; }
+  #printTemplate .box { display: inline-block; width: 11px; height: 11px; border: 1px solid #333; text-align: center; line-height: 10px; font-weight: 800; font-size: 9px; margin-left: 3px; }
+  #printTemplate .addr { font-size: 8px; line-height: 1.35; margin: 2px 0; }
+  #printTemplate .sectionrow > td { padding: 4px; }
+  #printTemplate .footer-table td { font-size: 8px; padding: 3px 5px; }
+  #printTemplate .sig-block { font-size: 9px; margin-top: 3px; line-height: 1.3; page-break-inside: avoid; }
+  #printTemplate .item1 { font-weight: 700; font-size: 10px; margin: 7px 0 2px; }
+  #printTemplate .itemsub { margin: 1px 0 1px 18px; font-size: 10px; }
+  #printTemplate .signaluse-label { font-size: 8px; color: #555; margin-bottom: 2px; }
+  #printTemplate .ruled-line { border-bottom: 1px solid #333; height: 13px; margin-bottom: 2px; }
 
-  #printTemplate { display: none; }
   @media print {
     body * { visibility: hidden; }
     #printTemplate, #printTemplate * { visibility: visible; }
-    #printTemplate {
-      display: block; position: absolute; left: 0; top: 0; width: 100%;
-      background: #fff; color: #000; padding: 10px; font-size: 10px; line-height: 1.25;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }
-    #printTemplate .page { padding-bottom: 160px; }
-    #printTemplate .page + .page { page-break-before: always; border-top: 2px dashed #ccc; padding-top: 12px; margin-top: 12px; }
-    #printTemplate .fixed-footer {
-      position: fixed; left: 10mm; right: 10mm; bottom: 0mm;
-      background: #fff;
-    }
-    #printTemplate .fixed-footer table { margin-bottom: 0; }
-    #printTemplate table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
-    #printTemplate td, #printTemplate th { border: 1px solid #888; padding: 3px 5px; vertical-align: top; }
-    #printTemplate th { background: #eee; font-weight: 700; text-align: left; }
-    #printTemplate .center { text-align: center; }
-    #printTemplate .h-title { font-size: 13px; font-weight: 700; text-align: center; margin: 0; }
-    #printTemplate .h-sub { font-size: 9px; text-align: right; margin: -14px 0 6px; }
-    #printTemplate .fileref { font-size: 9px; text-align: center; margin: 4px 0 6px; }
-    #printTemplate .noborder-box { border: 1px solid #888; padding: 3px; margin-bottom: 5px; min-height: 30px; font-size: 8px; color: #888; }
-    #printTemplate .item-num { font-weight: 700; }
-    #printTemplate .fixed { color: #333; }
-    #printTemplate .box { display: inline-block; width: 11px; height: 11px; border: 1px solid #333; text-align: center; line-height: 10px; font-weight: 800; font-size: 9px; margin-left: 3px; }
-    #printTemplate .addr { font-size: 8px; line-height: 1.35; margin: 2px 0; }
-    #printTemplate .sectionrow > td { padding: 4px; }
-    #printTemplate .footer-table td { font-size: 8px; padding: 3px 5px; }
-    #printTemplate .sig-block { font-size: 9px; margin-top: 3px; line-height: 1.3; page-break-inside: avoid; }
-    #printTemplate .item1 { font-weight: 700; font-size: 10px; margin: 7px 0 2px; }
-    #printTemplate .itemsub { margin: 1px 0 1px 18px; font-size: 10px; }
-    #printTemplate .signaluse-label { font-size: 8px; color: #555; margin-bottom: 2px; }
-    #printTemplate .ruled-line { border-bottom: 1px solid #333; height: 13px; margin-bottom: 2px; }
+    #printTemplate { position: static; left: auto; width: 100%; z-index: auto; }
     @page { margin: 10mm; }
   }
 </style>
@@ -160,7 +157,7 @@
     <p class="eyebrow">CENTRAL·FLYING·SCHOOL</p>
     <p class="stamp mono" id="dtg">—</p>
     <h1>Mishap Report</h1>
-    <p class="desc">AFB LBWG · CFS · PC 7 MK II. Fill in the details of the Mishap below and sumbit to UASO.</p>
+    <p class="desc">AFB LBWG · CFS · PC 7 MK II. Fill in the details of the Mishap below and submit to UASO.</p>
   </header>
 
   <div class="logline">
@@ -283,6 +280,10 @@
       <label for="tel">Tel No</label>
       <input type="text" id="tel" placeholder="Extension">
     </div>
+    <div class="field">
+      <label for="email">Email</label>
+      <input type="email" id="email" placeholder="Optional — for follow-up">
+    </div>
     <div class="toggle-row" style="margin-top:4px;">
       <span>Any injuries</span>
       <label class="switch">
@@ -295,7 +296,6 @@
 
   <div class="actions">
     <button class="primary" id="sendBtn">Send as Email</button>
-    <button class="secondary" id="copyBtn" style="margin-bottom:10px;">Copy Report Text</button>
     <button class="secondary" id="pdfBtn">Generate PDF</button>
     <p class="hint">Generate PDF opens your print dialog — choose "Save as PDF" to get a file, or print directly. Attach the saved file to your email manually if you want both together.</p>
   </div>
@@ -373,6 +373,30 @@
   <p class="itemsub">D. HEIGHT (Feet) &mdash; <span id="p-height">&nbsp;</span> AGL</p>
   <p class="itemsub">E. FLIGHT RULES &nbsp; IFR<span class="box" id="chk-ifr"></span> &nbsp; VFR<span class="box" id="chk-vfr"></span> &nbsp; S/VFR<span class="box" id="chk-svfr"></span> &nbsp; N/A<span class="box" id="chk-rulesna"></span></p>
   <p class="itemsub">F. CONDITIONS &nbsp; IMC<span class="box" id="chk-imc"></span> &nbsp; VMC<span class="box" id="chk-vmc"></span> &nbsp; N/A<span class="box" id="chk-metna"></span></p>
+
+  <!-- The reference SAAF form repeats this footer at the bottom of every page
+       (that's what @media print's position:fixed simulates for the browser's
+       own print/"Generate PDF"); the emailed PDF is a one-shot html2canvas
+       capture with no such repeat, so each page needs its own literal copy. -->
+  <div class="fixed-footer">
+    <table class="footer-table">
+      <tr>
+        <td style="width:14%">Page __ of 2 Page</td>
+        <td style="width:20%">Refers to a classified message<br>Yes&nbsp;&nbsp;No<span class="box">X</span></td>
+        <td style="width:36%">Drafter's Name: <span class="p-draftname">&nbsp;</span><br>Appointment: <span class="fixed">Commander</span><br>Phone No: <span class="p-tel1">&nbsp;</span></td>
+        <td style="width:30%">&nbsp;</td>
+      </tr>
+      <tr>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>
+          <div style="text-align:center;">RELEASING OFFICER'S SIGNATURE</div>
+          <div style="text-align:left;"><br><br><br><br><br><b>V.J. STARKE</b><br>Rank: Lt Col<br>Designation: BASCO AFB LBWG</div>
+        </td>
+      </tr>
+    </table>
+  </div>
 </div>
 
 <div class="page">
@@ -413,32 +437,39 @@
   <p class="item1">14. VERIFICATION</p>
   <p class="itemsub">A. UNIT ASO &mdash; <span class="fixed">MAJ C.C.D. APOLLIS</span></p>
   <p class="itemsub">B. BASE SAFETY OFFICER &mdash; <span class="fixed">LT COL V.J. STARKE</span></p>
+
+  <!-- Nested inside this .page (not a trailing sibling) — html2canvas silently
+       drops a trailing sibling's content when #printTemplate is captured
+       off-screen for the emailed PDF, even though it renders fine on-page. -->
+  <div class="fixed-footer">
+    <table class="footer-table">
+      <tr>
+        <td style="width:14%">Page __ of 2 Page</td>
+        <td style="width:20%">Refers to a classified message<br>Yes&nbsp;&nbsp;No<span class="box">X</span></td>
+        <td style="width:36%">Drafter's Name: <span class="p-draftname">&nbsp;</span><br>Appointment: <span class="fixed">Commander</span><br>Phone No: <span class="p-tel1">&nbsp;</span></td>
+        <td style="width:30%">&nbsp;</td>
+      </tr>
+      <tr>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>
+          <div style="text-align:center;">RELEASING OFFICER'S SIGNATURE</div>
+          <div style="text-align:left;"><br><br><br><br><br><b>V.J. STARKE</b><br>Rank: Lt Col<br>Designation: BASCO AFB LBWG</div>
+        </td>
+      </tr>
+    </table>
+  </div>
 </div>
 
-<div class="fixed-footer">
-  <table class="footer-table">
-    <tr>
-      <td style="width:14%">Page __ of 2 Page</td>
-      <td style="width:20%">Refers to a classified message<br>Yes&nbsp;&nbsp;No<span class="box">X</span></td>
-      <td style="width:36%">Drafter's Name: <span id="p-draftname">&nbsp;</span><br>Appointment: <span class="fixed">Commander</span><br>Phone No: <span id="p-tel1">&nbsp;</span></td>
-      <td style="width:30%">&nbsp;</td>
-    </tr>
-    <tr>
-      <td>&nbsp;</td>
-      <td>&nbsp;</td>
-      <td>&nbsp;</td>
-      <td>
-        <div style="text-align:center;">RELEASING OFFICER'S SIGNATURE</div>
-        <div style="text-align:left;"><br><br><br><br><br><b>V.J. STARKE</b><br>Rank: Lt Col<br>Designation: BASCO AFB LBWG</div>
-      </td>
-    </tr>
-  </table>
-</div>
-</div>
-
+<script src="./vendor/html2pdf.bundle.min.js" defer></script>
+<script src="./shared.js"></script>
 <script>
 
   const SAFETY_OFFICE_EMAIL = "Cfssafety22@gmail.com";
+  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyDVk6oNl8xfDBxG3oLdJnYLNgrf_atA3TkHLDug6ndmPuT7FCYSobSF2yOAuPzGOGI/exec";
+  // Must match the SUBMIT_SECRET Script Property set on the Apps Script project.
+  const SUBMIT_TOKEN = "e261964412c8249b9e14d62775843e78";
 
   function makeSegment(id, initial, onChange) {
     const el = document.getElementById(id);
@@ -487,24 +518,6 @@
     );
   });
 
-  const dtgEl = document.getElementById('dtg');
-  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  function pad(n) { return String(n).padStart(2, '0'); }
-  function bravoDate(d) { return new Date(d.getTime() + 2 * 60 * 60000); }
-  function formatDTG(d) {
-    const b = bravoDate(d);
-    return `${pad(b.getUTCDate())}${pad(b.getUTCHours())}${pad(b.getUTCMinutes())}B ${MONTHS[b.getUTCMonth()]} ${pad(b.getUTCFullYear() % 100)}`;
-  }
-  function finYear(d) {
-    const b = bravoDate(d);
-    const y = b.getUTCFullYear(), m = b.getUTCMonth() + 1;
-    const start = (m >= 4) ? y : y - 1;
-    return `${String(start).slice(2)}/${String(start + 1).slice(2)}`;
-  }
-  function tickDTG() { dtgEl.textContent = formatDTG(new Date()); }
-  tickDTG();
-  setInterval(tickDTG, 1000);
-
   const occurredEl = document.getElementById('occurred');
   (function setDefaultOccurred() {
     const now = new Date();
@@ -523,11 +536,6 @@
     return parts[1] || '';
   }
 
-  function autoGrow(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
-  document.querySelectorAll('textarea').forEach(el => {
-    autoGrow(el);
-    el.addEventListener('input', () => autoGrow(el));
-  });
 
   function collectFields() {
     return {
@@ -551,6 +559,7 @@
       initB: document.getElementById('initB').value.trim(),
       surnameB: document.getElementById('surnameB').value.trim(),
       tel: document.getElementById('tel').value.trim(),
+      email: document.getElementById('email').value.trim(),
       injuries: document.getElementById('injuries').checked,
       injuryDetail: document.getElementById('injuryDetail').value.trim()
     };
@@ -585,6 +594,7 @@
     lines.push(`  A. Commander \u2014 Force No: ${f.forceNoA || '\u2014'}, Rank: ${f.rankA || '\u2014'}, Init: ${f.initA || '\u2014'}, Surname: ${f.surnameA || '\u2014'}`);
     lines.push(`  B. Co-pilot/Student \u2014 Force No: ${f.forceNoB || '\u2014'}, Rank: ${f.rankB || '\u2014'}, Init: ${f.initB || '\u2014'}, Surname: ${f.surnameB || '\u2014'}`);
     lines.push(`  Tel No: ${f.tel || 'not provided'}`);
+    lines.push(`  Email: ${f.email || 'not provided'}`);
     lines.push(`Injuries: ${f.injuries ? 'Yes \u2014 ' + (f.injuryDetail || 'no detail given') : 'None reported'}`);
     return lines.join('\n');
   }
@@ -601,34 +611,38 @@
     return true;
   }
 
-  document.getElementById('sendBtn').addEventListener('click', () => {
+  document.getElementById('sendBtn').addEventListener('click', async () => {
     if (!validate()) return;
     const text = buildReportText();
-    const subject = encodeURIComponent(`[MISHAP] ${ddmmyyyy()} \u2014 ${typeSeg.get()} \u2014 ${categorySeg.get()}`);
-    const body = encodeURIComponent(text);
-    window.location.href = `mailto:${SAFETY_OFFICE_EMAIL}?subject=${subject}&body=${body}`;
-  });
+    const subjectRaw = `[MISHAP] ${ddmmyyyy()} \u2014 ${typeSeg.get()} \u2014 ${categorySeg.get()}`;
 
-  document.getElementById('copyBtn').addEventListener('click', async () => {
-    if (!validate()) return;
-    const text = buildReportText();
-    const btn = document.getElementById('copyBtn');
+    const btn = document.getElementById('sendBtn');
+    const label = btn.textContent;
+    btn.disabled = true;
     try {
-      await navigator.clipboard.writeText(text);
-      btn.textContent = 'Copied \u2713';
+      btn.textContent = 'Building PDF\u2026';
+      const pdfBlob = await buildPdfBlob();
+      const pdf = { name: pdfFilename(), type: 'application/pdf', base64: await fileToBase64(pdfBlob) };
+
+      btn.textContent = 'Sending\u2026';
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids a CORS preflight to Apps Script
+        body: JSON.stringify({ secret: SUBMIT_TOKEN, to: SAFETY_OFFICE_EMAIL, subject: subjectRaw, body: text, pdf })
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      btn.textContent = 'Sent with PDF \u2713';
     } catch (err) {
-      const ta = document.createElement('textarea');
-      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
-      document.body.appendChild(ta); ta.select();
-      try { document.execCommand('copy'); btn.textContent = 'Copied \u2713'; }
-      catch (e) { btn.textContent = 'Copy failed'; }
-      document.body.removeChild(ta);
+      console.error(err);
+      alert('Could not send with PDF (' + err.message + '). Opening a text-only email instead.');
+      window.location.href = `mailto:${SAFETY_OFFICE_EMAIL}?subject=${encodeURIComponent(subjectRaw)}&body=${encodeURIComponent(text)}`;
+    } finally {
+      btn.disabled = false;
+      setTimeout(() => { btn.textContent = label; }, 4000);
     }
-    setTimeout(() => { btn.textContent = 'Copy Report Text'; }, 2500);
   });
 
-  document.getElementById('pdfBtn').addEventListener('click', () => {
-    if (!validate()) return;
+  function populatePrintTemplate() {
     const f = collectFields();
     document.getElementById('p-tail1').textContent = f.tail;
     document.getElementById('p-tail2').textContent = f.tail;
@@ -660,8 +674,8 @@
     document.getElementById('p-ename').textContent = f.surnameA;
     document.getElementById('p-etel').textContent = f.tel;
     const draftName = [f.initA, f.surnameA].filter(Boolean).join(' ');
-    document.getElementById('p-draftname').textContent = draftName;
-    document.getElementById('p-tel1').textContent = f.tel;
+    document.querySelectorAll('.p-draftname').forEach(el => { el.textContent = draftName; });
+    document.querySelectorAll('.p-tel1').forEach(el => { el.textContent = f.tel; });
 
     ['chk-accident','chk-incident','chk-flying','chk-nonflying','chk-normal','chk-atc','chk-bird','chk-weapon','chk-battle',
      'chk-day','chk-night','chk-sunrise','chk-sunset','chk-todna','chk-ifr','chk-vfr','chk-svfr','chk-rulesna',
@@ -678,61 +692,115 @@
     if (rulesMap[f.rules]) mark(rulesMap[f.rules]);
     const metMap = { IMC: 'chk-imc', VMC: 'chk-vmc', 'N/A': 'chk-metna' };
     if (metMap[f.met]) mark(metMap[f.met]);
+  }
 
+  document.getElementById('pdfBtn').addEventListener('click', () => {
+    if (!validate()) return;
+    populatePrintTemplate();
     window.print();
   });
-</script>
 
-<script>
-  (function() {
-    const KEY = 'cfsInstallDismissed';
-    function isStandalone() {
-      return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-    }
-    function isIOS() {
-      return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    }
-    if (isStandalone()) return;
-    let dismissed = false;
-    try { dismissed = localStorage.getItem(KEY) === '1'; } catch (e) {}
-    if (dismissed) return;
+  function pdfFilename() {
+    return (`MISHAP ${ddmmyyyy().replace(/\//g, '-')} ${typeSeg.get()}`
+      .replace(/[^\w .-]/g, '').trim() || 'MISHAP') + '.pdf';
+  }
 
-    const banner = document.getElementById('installBanner');
-    const msg = document.getElementById('installMsg');
-    const installBtn = document.getElementById('installBtn');
-    const closeBtn = document.getElementById('installClose');
-    let deferredPrompt = null;
-
-    function dismiss() {
-      banner.classList.remove('show');
-      try { localStorage.setItem(KEY, '1'); } catch (e) {}
-    }
-    closeBtn.addEventListener('click', dismiss);
-
-    if (isIOS()) {
-      msg.textContent = '\uD83D\uDCF2 For the best experience, tap the Share icon and select "Add to Home Screen"';
-      banner.classList.add('show');
-    } else {
-      window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        msg.textContent = 'Install this app for one-tap access, even offline.';
-        installBtn.style.display = '';
-        banner.classList.add('show');
-      });
-      installBtn.addEventListener('click', () => {
-        if (!deferredPrompt) return;
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then(() => dismiss());
-      });
-    }
-  })();
-</script>
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result.split(',')[1]);
+      r.onerror = reject;
+      r.readAsDataURL(file);
     });
+  }
+
+  async function buildPdfBlob() {
+    populatePrintTemplate();
+    const el = document.getElementById('printTemplate');
+    // html2canvas captures the element at its real document position, and a
+    // `position:fixed` element collapses to 0 height inside its clone
+    // container — so switch to absolute + explicit size for the capture.
+    const saved = { position: el.style.position, left: el.style.left, top: el.style.top, zIndex: el.style.zIndex };
+    const scrollY = window.scrollY;
+    el.style.position = 'absolute';
+    el.style.left = '0';
+    el.style.top = '0';
+    el.style.zIndex = '-1';
+    window.scrollTo(0, 0);
+
+    // Force each .page to an explicit inline height (not just the flex
+    // min-height from CSS) — html2canvas's clone doesn't reliably respect a
+    // flex-driven min-height, so the footer's margin-top:auto can end up
+    // higher than the live page shows, and the clone renders shorter overall.
+    const pages = el.querySelectorAll('.page');
+    pages.forEach(p => { p.style.height = p.offsetHeight + 'px'; });
+
+    try {
+      // Capture #printTemplate as ONE tall canvas (capturing a .page child
+      // directly makes html2canvas render at the wrong width — washed-out,
+      // overflowing text), then slice that single canvas into per-page
+      // images ourselves. html2pdf's own multi-page auto-slicing
+      // (pagebreak css/legacy mode) was tried and consistently shortchanged
+      // every page after the first by ~20-40px, clipping the footer even
+      // though the source content fit — manual slicing sidesteps that
+      // unreliable arithmetic entirely.
+      const elRect = el.getBoundingClientRect();
+      const ranges = Array.from(pages).map(p => {
+        const r = p.getBoundingClientRect();
+        return { top: r.top - elRect.top, bottom: r.bottom - elRect.top };
+      });
+      // html2canvas's clone can lay out wrapped text (e.g. a 2-line event
+      // description) a bit taller than the live page does, and that drift
+      // accumulates — by the last page, real rendered content can run tens
+      // of px past where the live-DOM rect above says the page ends,
+      // clipping the signature block even though every DOM measurement
+      // looked correct. Nothing follows the last page, so it's safe to
+      // just let its crop run all the way to the true captured bottom.
+      const w = el.offsetWidth, h = el.scrollHeight + 100;
+      ranges[ranges.length - 1].bottom = h;
+      const worker = html2pdf().set({
+        margin: 0,
+        html2canvas: {
+          scale: 2, backgroundColor: '#ffffff', useCORS: true,
+          x: 0, y: 0, scrollX: 0, scrollY: 0, width: w, height: h, windowWidth: w, windowHeight: h
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      }).from(el);
+      const fullCanvas = await worker.toCanvas().get('canvas');
+      const pdf = await worker.toPdf().get('pdf');
+      const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight();
+      const pxPerCssPx = fullCanvas.width / w;
+
+      const cropCanvases = ranges.map(r => {
+        const c = document.createElement('canvas');
+        c.width = fullCanvas.width;
+        c.height = Math.round((r.bottom - r.top) * pxPerCssPx);
+        c.getContext('2d').drawImage(
+          fullCanvas, 0, Math.round(r.top * pxPerCssPx), fullCanvas.width, c.height,
+          0, 0, c.width, c.height
+        );
+        return c;
+      });
+
+      // Discard whatever html2pdf's own auto-pagination produced and rebuild
+      // the document from our own crops (jsPDF always needs >=1 page, so the
+      // first crop overwrites page 1 instead of adding a fresh page for it).
+      const autoPageCount = pdf.internal.getNumberOfPages();
+      for (let i = autoPageCount; i > 1; i--) pdf.deletePage(i);
+      pdf.addImage(cropCanvases[0].toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pw, ph);
+      for (let i = 1; i < cropCanvases.length; i++) {
+        pdf.addPage();
+        pdf.addImage(cropCanvases[i].toDataURL('image/jpeg', 0.95), 'JPEG', 0, 0, pw, ph);
+      }
+      return pdf.output('blob');
+    } finally {
+      pages.forEach(p => { p.style.height = ''; });
+      el.style.position = saved.position || 'fixed';
+      el.style.left = saved.left || '-10000px';
+      el.style.top = saved.top || '0';
+      el.style.zIndex = saved.zIndex || '-1';
+      window.scrollTo(0, scrollY);
+    }
   }
 </script>
 </body>
