@@ -282,6 +282,8 @@
   // Deploy apps-script/Code.gs as a Web App (Execute as: Me, Access: Anyone)
   // and paste the deployment URL here to enable photo attachments.
   const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxtDb_E7V1tDf1EntuPlBJyF1ydZV0jPnD7KMKlVAfEWtj10zP7Izw6UY0tOFuFNx5q/exec";
+  // Must match the SUBMIT_SECRET Script Property set on the Apps Script project.
+  const SUBMIT_TOKEN = "REPLACE_WITH_SAME_VALUE_AS_SUBMIT_SECRET";
 
   const typeSegment = document.getElementById('typeSegment');
   let hazardCategory = 'Flying';
@@ -385,7 +387,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids a CORS preflight to Apps Script
         body: JSON.stringify({
-          to: SAFETY_OFFICE_EMAIL, subject, body: text, pdf, photos
+          secret: SUBMIT_TOKEN, to: SAFETY_OFFICE_EMAIL, subject, body: text, pdf, photos
           // Reporter confirmation email — commented out pending go-ahead. To activate, uncomment
           // this and the matching block in apps-script/Code.gs.
           // , confirmTo: document.getElementById('email').value.trim() || undefined

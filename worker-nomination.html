@@ -244,7 +244,9 @@
   });
 
   function csvField(val) {
-    const s = String(val ?? '');
+    let s = String(val ?? '');
+    // Prefix formula-leading characters so spreadsheet apps don't execute the field as a formula.
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
     return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   }
   function downloadCSV(filename, headers, values) {
