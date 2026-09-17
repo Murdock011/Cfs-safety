@@ -3,6 +3,9 @@
  * New deployment → type "Web app" → Execute as: Me → Who has access: Anyone
  * → copy the deployment URL into APPS_SCRIPT_URL in the report forms.
  */
+// Fixed recipient — never trust `to` from the client, or this endpoint becomes an open mail relay.
+const RECIPIENT_EMAIL = 'gerhard.duminy@gmail.com';
+
 function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
@@ -13,7 +16,7 @@ function doPost(e) {
       attachments.push(Utilities.newBlob(Utilities.base64Decode(data.pdf.base64), data.pdf.type || 'application/pdf', data.pdf.name || 'report.pdf'));
     }
     MailApp.sendEmail({
-      to: data.to,
+      to: RECIPIENT_EMAIL,
       subject: data.subject || 'CFS Report',
       body: data.body || '',
       attachments: attachments
